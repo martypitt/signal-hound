@@ -63,7 +63,7 @@ class FeedsService(
             required = false,
             defaultValue = Int.MAX_VALUE.toString()
         ) limit: Int = Int.MAX_VALUE
-    ): Flux<ServerSentEvent<SignalParseResult>> {
+    ): Flux<SignalParseResult> {
         val feedSpec = lookupFeedSpecByApiEndpoint(apiEndpoint)
         return executeFeed(feedSpec, limit)
     }
@@ -92,6 +92,9 @@ class FeedsService(
         return schemaGenerator.generateForFeed(feedSpec)
     }
 
+    /**
+     * Produces SSE
+     */
     @GetMapping("/feeds/{id}/stream")
     fun executeFeed(
         @PathVariable("id") feedId: String,
@@ -103,25 +106,25 @@ class FeedsService(
     ): Flux<ServerSentEvent<SignalParseResult>> {
         val feed = getFeed(feedId)
         return executeFeed(feed, limit)
-    }
-
-    private fun executeFeed(
-        feed: FeedSpec,
-        limit: Int
-    ): Flux<ServerSentEvent<SignalParseResult>> {
-        val cache = getOrBuildFeedCache(feed)
-
-        val parseResults = cache.get(feed.id!!) {
-            executor.executeAsFlux(feed, limit)
-                .replay() // replay, rather than cache, as we want the completion events replayed too.
-                .autoConnect()
-        }
-        return parseResults
             .map { parseResult ->
                 ServerSentEvent.builder<SignalParseResult>()
                     .data(parseResult)
                     .build()
             }
+    }
+
+    private fun executeFeed(
+        feed: FeedSpec,
+        limit: Int
+    ): Flux<SignalParseResult> {
+        val cache = getOrBuildFeedCache(feed)
+
+        return cache.get(feed.id!!) {
+            executor.executeAsFlux(feed, limit)
+                .replay() // replay, rather than cache, as we want the completion events replayed too.
+                .autoConnect()
+        }
+
     }
 
     private fun getOrBuildFeedCache(feed: FeedSpec): Cache<String, Flux<SignalParseResult>> {
