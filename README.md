@@ -51,10 +51,7 @@ Data is cached based on the period you define, so you don't spam the OpenAI API.
 We also generate an OpenAPI spec.  (This is needed for Orbital to orchestrate the APIs together).
 
 ## Can I use this?
-Yep.  It's licensed under ELv2, so you can use it for your own purposes, modify it, run it locally, etc -- you just can't use it to build your own managed service.
-
-The intent of choosing this license is to allow others who are running their own startup to self-host this tool for building their own sales funnel automations.
-But, if I choose to launch this as a product someday, then I don't want you competing with me.  
+Yep.  It's licensed under ELv2, so you can use it for your own purposes, modify it, run it locally, etc -- you just can't use it to build your own managed service which you offer to paying customers.
 
 See the `LICENSE` file for full details.
 
