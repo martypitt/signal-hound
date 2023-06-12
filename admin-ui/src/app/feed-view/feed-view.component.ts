@@ -103,7 +103,7 @@ export class FeedViewComponent {
       return [];
     }
     return [
-      {label: 'API Endpoint', value: this.hydrateUrl(this.feedSpec?.apiEndpoint!)!},
+      {label: 'API Endpoint', value: this.hydrateUrl(this.feedSpec?.apiPath!)!},
       {label: 'OpenAPI Spec', value: this.hydrateUrl(this.feedSpec?.openApiSpecPath!)!},
       {label: 'Regenerate OpenAPI Spec', value: this.hydrateUrl(this.feedSpec?.regenerateApiSpecPath!)!}
     ]
