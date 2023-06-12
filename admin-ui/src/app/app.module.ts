@@ -6,7 +6,7 @@ import {BrowserModule} from '@angular/platform-browser';
 
 import {AppRoutingModule} from './app-routing.module';
 import {AppComponent} from './app.component';
-import {SignalListPageModule} from "./signal-list-page/signal-list-page.module";
+import {FeedListPageModule} from "./signal-list-page/feed-list-page.module";
 import {SidebarModule} from "./sidebar/sidebar.module";
 import {NavbarModule} from "./navbar/navbar.module";
 import {CreateFeedComponent} from "./create-signal/create-feed.component";
@@ -21,7 +21,7 @@ import {FeedViewModule} from "./feed-view/feed-view.module";
   imports: [
     BrowserModule,
     AppRoutingModule,
-    SignalListPageModule,
+    FeedListPageModule,
     CreateSignalModule,
     SidebarModule,
     NavbarModule,

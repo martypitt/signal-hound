@@ -1,5 +1,5 @@
 import {NgModule} from '@angular/core';
-import {SignalListPageComponent} from "./signal-list-page.component";
+import {FeedListPageComponent} from "./feed-list-page.component";
 import {HeaderComponentLayoutModule} from "../header-component-layout/header-component-layout.module";
 import {TuiButtonModule} from "@taiga-ui/core";
 import {RouterLink, RouterLinkWithHref} from "@angular/router";
@@ -14,9 +14,9 @@ import {AsyncPipe, NgForOf} from "@angular/common";
     AsyncPipe,
     RouterLinkWithHref
   ],
-  exports: [SignalListPageComponent],
-  declarations: [SignalListPageComponent],
+  exports: [FeedListPageComponent],
+  declarations: [FeedListPageComponent],
   providers: [],
 })
-export class SignalListPageModule {
+export class FeedListPageModule {
 }

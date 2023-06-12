@@ -2,6 +2,9 @@ package io.signals.admin.feeds
 
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.module.kotlin.MissingKotlinParameterException
+import com.google.common.cache.Cache
+import com.google.common.cache.CacheBuilder
+import io.ktor.http.*
 import io.signals.Extraction
 import io.signals.SignalParseResult
 import io.signals.admin.BadRequestException
@@ -29,22 +32,64 @@ import org.springframework.web.bind.annotation.RequestBody
 import org.springframework.web.bind.annotation.RequestParam
 import org.springframework.web.bind.annotation.RestController
 import reactor.core.publisher.Flux
+import java.time.Duration
+import java.util.concurrent.ConcurrentHashMap
 import kotlin.reflect.KClass
 
 @RestController
 class FeedsService(
-    private val repo: SignalRepository,
+    private val repo: FeedSpecRepository,
     private val validator: Validator,
     private val objectMapper: ObjectMapper,
-    private val executor: FeedExecutor
+    private val executor: FeedExecutor,
+    private val schemaGenerator: OpenAPISchemaGenerator
 ) {
 
     private val logger = KotlinLogging.logger {}
+
+    private val feedCacheMap = ConcurrentHashMap<FeedSpec, Cache<String, Flux<SignalParseResult>>>()
 
     @PostMapping("/feeds/test")
     suspend fun testSignal(@RequestBody @Valid spec: FeedSpec): List<SignalParseResult> {
         validateConfig(spec)
         return executor.execute(spec, 3)
+    }
+
+    @GetMapping("/feeds/api/{apiEndpoint}")
+    fun executeFeedByName(
+        @PathVariable("apiEndpoint") apiEndpoint: String,
+        @RequestParam(
+            "limit",
+            required = false,
+            defaultValue = Int.MAX_VALUE.toString()
+        ) limit: Int = Int.MAX_VALUE
+    ): Flux<ServerSentEvent<SignalParseResult>> {
+        val feedSpec = lookupFeedSpecByApiEndpoint(apiEndpoint)
+        return executeFeed(feedSpec, limit)
+    }
+
+    private fun lookupFeedSpecByApiEndpoint(apiEndpoint: String): FeedSpec {
+        val apiEndpointWithPrefix = "/$apiEndpoint"
+        val feedSpec = repo.findByApiEndpoint(apiEndpointWithPrefix)
+            ?: throw NotFoundException("No feed defined at /feeds/api${apiEndpointWithPrefix}")
+        return feedSpec
+    }
+
+    @GetMapping("/feeds/api/{apiEndpoint}/open-api", produces = ["application/x-yaml"])
+    fun getOpenApiSpec(@PathVariable("apiEndpoint") apiEndpoint: String):YamlString {
+        val feedSpec = lookupFeedSpecByApiEndpoint(apiEndpoint)
+        return schemaGenerator.generateForFeed(feedSpec)
+    }
+    @GetMapping("/feeds/api/{apiEndpoint}/open-api", produces = ["application/x-yaml"], params = ["refresh"])
+    suspend fun refreshFeedSchema(@PathVariable("apiEndpoint") apiEndpoint: String):YamlString {
+        val feedSpec = lookupFeedSpecByApiEndpoint(apiEndpoint)
+        return refreshFeedSchema(feedSpec)
+    }
+
+    private suspend fun refreshFeedSchema(feedSpec: FeedSpec): YamlString {
+        val (yaml, components) = schemaGenerator.generateModelSchemaForSpec(feedSpec)
+        schemaGenerator.saveForSpec(feedSpec, yaml)
+        return schemaGenerator.generateForFeed(feedSpec)
     }
 
     @GetMapping("/feeds/{id}/stream")
@@ -57,12 +102,34 @@ class FeedsService(
         ) limit: Int = Int.MAX_VALUE
     ): Flux<ServerSentEvent<SignalParseResult>> {
         val feed = getFeed(feedId)
-        return executor.executeAsFlux(feed, limit)
+        return executeFeed(feed, limit)
+    }
+
+    private fun executeFeed(
+        feed: FeedSpec,
+        limit: Int
+    ): Flux<ServerSentEvent<SignalParseResult>> {
+        val cache = getOrBuildFeedCache(feed)
+
+        val parseResults = cache.get(feed.id!!) {
+            executor.executeAsFlux(feed, limit)
+                .replay() // replay, rather than cache, as we want the completion events replayed too.
+                .autoConnect()
+        }
+        return parseResults
             .map { parseResult ->
                 ServerSentEvent.builder<SignalParseResult>()
                     .data(parseResult)
                     .build()
             }
+    }
+
+    private fun getOrBuildFeedCache(feed: FeedSpec): Cache<String, Flux<SignalParseResult>> {
+        return feedCacheMap.getOrPut(feed) {
+            CacheBuilder.newBuilder()
+                .expireAfterWrite(Duration.ofSeconds(feed.cacheDurationSeconds.toLong()))
+                .build<String, Flux<SignalParseResult>>()
+        }
     }
 
     @GetMapping("/feeds/{id}")
@@ -76,15 +143,21 @@ class FeedsService(
     }
 
     @PutMapping("/feeds")
-    fun createSignal(@RequestBody @Valid spec: FeedSpec): FeedSpec {
+    suspend fun createFeed(@RequestBody @Valid spec: FeedSpec): FeedSpec {
         validateConfig(spec)
-        return repo.save(spec)
+        val feedSpec = repo.save(spec)
+        try {
+            refreshFeedSchema(feedSpec)
+        } catch (e: Exception) {
+            logger.warn { "Failed to generate schema for ${spec.id}" }
+        }
+        return feedSpec
     }
+
 
     private fun validateConfig(spec: FeedSpec) {
         spec.type.createTypedConfig(spec.config, objectMapper, validator)
     }
-
 }
 
 @Entity
@@ -96,21 +169,19 @@ data class FeedSpec(
 
     @Enumerated(value = EnumType.STRING)
     val type: FeedType,
-    @Lob
     @Convert(converter = AnyJsonConverter::class)
-    @Column
+    @Column(length = 5000)
     val config: Map<String, Any>,
 
-    @Lob
     @Convert(converter = ExtractionListConverter::class)
-    @Column
+    @Column(length = 5000)
     val extractions: List<Extraction>,
 
     @Column
     @field:Min(0)
     val cacheDurationSeconds: Int,
 
-    @Column
+    @Column(unique = true)
     @field:NotBlank
     @field:Size(max = 100)
     @field:Pattern(regexp = VALID_PATH_REGEX)
@@ -121,6 +192,14 @@ data class FeedSpec(
     @Column
     val id: String? = null,
 ) {
+    val apiPath: String
+        get() = "/feeds/api$apiEndpoint"
+
+    val openApiSpecPath: String
+        get() = "/feeds/api${apiEndpoint}/open-api"
+    val regenerateApiSpecPath: String
+        get() = "/feeds/api${apiEndpoint}/open-api?refresh"
+
     companion object {
         /**
          *  * Must only contain letters that are valid within a URL
@@ -129,11 +208,13 @@ data class FeedSpec(
          *  * Must not contain any other slashes other than the one at the start.
          *  * Must not contain a period
          */
-        const val VALID_PATH_REGEX:String = "^\\/[a-zA-Z\\-]+\$"
+        const val VALID_PATH_REGEX: String = "^\\/[a-zA-Z\\-]+\$"
     }
 }
 
-interface SignalRepository : JpaRepository<FeedSpec, String>
+interface FeedSpecRepository : JpaRepository<FeedSpec, String> {
+    fun findByApiEndpoint(apiEndpoint: String): FeedSpec?
+}
 
 
 data class RssFeedConfig(
@@ -141,10 +222,10 @@ data class RssFeedConfig(
     @field:URL(message = "url is not valid")
     val url: String,
 
-    @field:Min(1)
-    val pollFrequency: Int,
-
-    val pollPeriod: PollPeriod
+//    @field:Min(1)
+//    val pollFrequency: Int,
+//
+//    val pollPeriod: PollPeriod
 )
 
 enum class FeedType(val configClass: KClass<*>) {

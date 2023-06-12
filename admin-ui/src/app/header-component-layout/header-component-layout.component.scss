@@ -41,6 +41,9 @@
 
   .body {
     max-width: 1280px;
+    &.wide {
+      max-width: unset;
+    }
     margin: 0 auto;
     // LR padding is to prevent rubbing up the side of smaller containers
     padding: 2rem 2rem 0;

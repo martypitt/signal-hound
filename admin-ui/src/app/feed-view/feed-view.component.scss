@@ -1,3 +1,9 @@
+@import "~src/tailwind-colors";
 .table {
   width: 100%;
+
+  th, td {
+    border: 1px solid $slate-300;
+    padding: 0.25rem 0.5rem;
+  }
 }

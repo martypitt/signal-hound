@@ -57,17 +57,23 @@ class SignalParser(
     private suspend fun parseSignal(
         signalSource: SignalSource,
         systemPrompt: String
-    ) = try {
-        logger.info { "Attempting enrichment of signal ${signalSource.id}" }
-        val question = systemPrompt + "\n\n\n" + signalSource.text()
-        val completionsResponse = openAiClient.sendCompletion(question)
-        val signals = readSignalsFromCompletionResponse(completionsResponse)
+    ): SignalParseResult {
+        return try {
+            logger.info { "Attempting enrichment of signal ${signalSource.id}" }
+            val question = systemPrompt + "\n\n\n" + signalSource.text()
 
-        logger.info { "Signal ${signalSource.id} enriched successfully" }
-        SignalParseResult.success(signalSource, signalSource.signalUri, signals)
-    } catch (e: Exception) {
-        logger.warn { "Signal ${signalSource.id} failed to provide signals: ${e.message!!}.  Source: ${signalSource.signalUri}" }
-        SignalParseResult.failed(signalSource, signalSource.signalUri, e.message!!)
+            val completionsResponse = openAiClient.sendCompletion(question)
+            val signals = readSignalsFromCompletionResponse(completionsResponse)
+
+            logger.info { "Signal ${signalSource.id} enriched successfully" }
+            SignalParseResult.success(signalSource, signalSource.signalUri, signals)
+        } catch (e: OpenAiApiException) {
+            logger.warn { "Signal ${signalSource.id} error at OpenAPI: ${e.message!!}.  Source: ${signalSource.signalUri}" }
+            SignalParseResult.failed(signalSource, signalSource.signalUri, e.error.error.message)
+        } catch (e: Exception) {
+            logger.warn { "Signal ${signalSource.id} failed to provide signals: ${e.message!!}.  Source: ${signalSource.signalUri}" }
+            SignalParseResult.failed(signalSource, signalSource.signalUri, e.message!!)
+        }
     }
 
     private fun buildSystemPrompt(extractions: List<Extraction>) =
@@ -78,7 +84,7 @@ class SignalParser(
     The JSON should follow this schema:
     
     ```
-    ${extractionsAsMarkdownTable(extractions)}
+    ${extractionsToMarkdownTable(extractions)}
     ```
     """
 
@@ -102,28 +108,27 @@ class SignalParser(
         return parseJsonIsh(choice.message.content)
 
     }
+}
 
-    private fun extractionsAsMarkdownTable(extractions: List<Extraction>): String {
-        val header = listOf("Field name", "Description", "Example")
-            .asMarkdownTableRow()
-        val seperatorToken = "-----------------"
-        val seperator = listOf(seperatorToken, seperatorToken, seperatorToken)
-            .asMarkdownTableRow(appendWhitespace = false)
-        val body = extractions.joinToString("\n") { extraction ->
-            val fieldName = if (extraction.title.contains(" ")) {
-                CaseFormat.UPPER_UNDERSCORE.to(CaseFormat.LOWER_CAMEL, extraction.title.uppercase().replace(" ", "_"))
-            } else {
-                extraction.title
-            }
-
-            listOf(fieldName, extraction.description, extraction.sample)
-                .asMarkdownTableRow()
+fun extractionsToMarkdownTable(extractions: List<Extraction>):String {
+    val header = listOf("Field name", "Description", "Example")
+        .asMarkdownTableRow()
+    val seperatorToken = "-----------------"
+    val seperator = listOf(seperatorToken, seperatorToken, seperatorToken)
+        .asMarkdownTableRow(appendWhitespace = false)
+    val body = extractions.joinToString("\n") { extraction ->
+        val fieldName = if (extraction.title.contains(" ")) {
+            CaseFormat.UPPER_UNDERSCORE.to(CaseFormat.LOWER_CAMEL, extraction.title.uppercase().replace(" ", "_"))
+        } else {
+            extraction.title
         }
 
-        return listOf(header, seperator, body)
-            .joinToString("\n")
+        listOf(fieldName, extraction.description, extraction.sample)
+            .asMarkdownTableRow()
     }
 
+    return listOf(header, seperator, body)
+        .joinToString("\n")
 }
 
 private fun List<String>.asMarkdownTableRow(appendWhitespace: Boolean = true): String {

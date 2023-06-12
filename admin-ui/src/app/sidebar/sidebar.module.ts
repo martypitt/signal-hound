@@ -1,6 +1,8 @@
 import { NgModule } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { SidebarComponent } from './sidebar.component';
+import {RouterLinkWithHref} from "@angular/router";
+import {TuiSvgModule} from "@taiga-ui/core";
 
 
 
@@ -12,7 +14,9 @@ import { SidebarComponent } from './sidebar.component';
     SidebarComponent
   ],
   imports: [
-    CommonModule
+    CommonModule,
+    RouterLinkWithHref,
+    TuiSvgModule
   ]
 })
 export class SidebarModule { }

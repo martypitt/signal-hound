@@ -14,12 +14,14 @@ import {Router} from "@angular/router";
           <div class="row">
             <tui-input
               formControlName="title"
+              (blur)="suggestApiEndpoint()"
               [tuiTextfieldCleaner]="true"
             >
               Title
               <span class="tui-required"></span>
               <input
                 tuiTextfield
+                (blur)="suggestApiEndpoint()"
                 placeholder="Title"
               />
             </tui-input>
@@ -44,18 +46,37 @@ import {Router} from "@angular/router";
               ></tui-data-list-wrapper>
             </tui-select>
           </div>
-        </form>
-        <ng-container [ngSwitch]="feedType">
-          <app-rss-feed-config *ngSwitchCase="'RssFeed'" (rssConfigChange)="updateFeedSpec('config', $event)"
-                               (errorsChange)="configErrors = $event" (validChange)="configValid = $event"
-          >
+          <ng-container [ngSwitch]="feedType">
+            <app-rss-feed-config *ngSwitchCase="'RssFeed'" (rssConfigChange)="updateFeedSpec('config', $event)"
+                                 (errorsChange)="configErrors = $event" (validChange)="configValid = $event"
+            >
 
-          </app-rss-feed-config>
-          <div *ngSwitchDefault
-               class="w-full flex p-8 mb-4 text-lg font-light border border-dashed border-slate-400 rounded-lg place-content-center">
-            <div>Select a feed type, and configuration options will appear here</div>
+            </app-rss-feed-config>
+            <div *ngSwitchDefault
+                 class="w-full flex p-8 mb-4 text-lg font-light border border-dashed border-slate-400 rounded-lg place-content-center">
+              <div>Select a feed type, and configuration options will appear here</div>
+            </div>
+          </ng-container>
+          <div class="row">
+            <tui-input-number formControlName="cacheDurationSeconds"
+                              tuiTextfieldPostfix=" seconds">Cache duration (in seconds)
+
+            </tui-input-number>
+            <tui-error
+              formControlName="cacheDurationSeconds"
+              [error]="[] | tuiFieldError | async"
+            ></tui-error>
           </div>
-        </ng-container>
+          <div class="row">
+            <tui-input formControlName="apiEndpoint">API Endpoint
+            </tui-input>
+            <div class="text-sm mt-2 text-slate-500">Start with a slash. Letters, numbers and hyphens only.</div>
+            <tui-error
+              formControlName="apiEndpoint"
+              [error]="[] | tuiFieldError | async"
+            ></tui-error>
+          </div>
+        </form>
         <app-field-table (extractionsChange)="updateFeedSpec('extractions', $event)"></app-field-table>
       </div>
 
@@ -66,7 +87,7 @@ import {Router} from "@angular/router";
 
       <div class="my-8">
 
-        <button tuiButton appearance="outline" size="m" class="mr-8">Test it out</button>
+<!--        <button tuiButton appearance="outline" size="m" class="mr-8">Test it out</button>-->
         <button tuiButton appearance="primary" size="m" [disabled]="!isValid || working" [showLoader]="working"
                 (click)="saveFeed()">Save
         </button>
@@ -75,7 +96,7 @@ import {Router} from "@angular/router";
 
     </app-header-component-layout>
   `,
-  styleUrls: ['./create-signal.component.scss']
+  styleUrls: ['./create-feed.component.scss']
 })
 export class CreateFeedComponent {
 
@@ -100,7 +121,9 @@ export class CreateFeedComponent {
     title: null,
     config: null,
     extractions: null,
-    type: null
+    type: null,
+    apiEndpoint: null,
+    cacheDurationSeconds: 3600
   }
 
   feedTypes: FeedType[] = ['RssFeed']
@@ -127,7 +150,9 @@ export class CreateFeedComponent {
   ) {
     this.formGroup = new FormGroup<any>({
       title: new FormControl(null, Validators.required),
-      type: new FormControl(null, Validators.required)
+      type: new FormControl(null, Validators.required),
+      cacheDurationSeconds: new FormControl(this.feedSpec.cacheDurationSeconds, [Validators.required, Validators.min(0)]),
+      apiEndpoint: new FormControl(null, Validators.pattern('^\\/[a-zA-Z\\-]+\$'))
     })
     this.formGroup.valueChanges.subscribe(update => {
       const updateValue = update as Partial<FeedSpec>
@@ -160,6 +185,26 @@ export class CreateFeedComponent {
       }
     })
   }
+
+  suggestApiEndpoint() {
+
+    if (!this.feedSpec.title) return;
+    // Lowercase the string
+    let suggestedApiPath = this.feedSpec.title!.toLowerCase();
+
+    // Replace spaces with dashes
+    suggestedApiPath = suggestedApiPath.replace(/\s+/g, '-');
+
+    // Strip out illegal characters
+    suggestedApiPath = suggestedApiPath.replace(/[^a-z\-]/g, '');
+
+    // Prepend a leading slash
+    suggestedApiPath = '/' + suggestedApiPath;
+
+    this.feedSpec.apiEndpoint = suggestedApiPath;
+    this.formGroup.get('apiEndpoint')?.setValue(suggestedApiPath);
+
+  }
 }
 
 export interface FeedSpec {
@@ -168,6 +213,13 @@ export interface FeedSpec {
   type: FeedType | null;
   config: any | null;
   extractions: Extraction[] | null;
+  cacheDurationSeconds: number | null;
+  apiEndpoint: string | null;
+
+  // Server-generated components
+  apiPath?: string;
+  openApiSpecPath?: string;
+  regenerateApiSpecPath?: string;
 }
 
 export type FeedType = 'RssFeed';

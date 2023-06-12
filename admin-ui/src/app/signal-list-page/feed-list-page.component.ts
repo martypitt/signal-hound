@@ -5,14 +5,14 @@ import {Observable} from "rxjs";
 import {Router} from "@angular/router";
 
 @Component({
-  selector: 'app-signal-list-page',
-  styleUrls: ['./signal-list-page.component.scss'],
+  selector: 'app-feed-list',
+  styleUrls: ['./feed-list-page.component.scss'],
   template: `
-      <app-header-component-layout title="Signals">
+      <app-header-component-layout title="Feeds">
           <ng-container ngProjectAs="buttons">
               <button tuiButton appearance="outline" size="m"
                       [routerLink]="['signals/new']"
-              >Create new signal
+              >Create new feed
               </button>
           </ng-container>
 
@@ -31,7 +31,7 @@ import {Router} from "@angular/router";
       </app-header-component-layout>
   `
 })
-export class SignalListPageComponent {
+export class FeedListPageComponent {
   feeds$: Observable<FeedSpec[]>;
 
   constructor(private feedsService: FeedsService, private router: Router) {

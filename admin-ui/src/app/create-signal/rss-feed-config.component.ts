@@ -22,49 +22,49 @@ import {FormControl, FormGroup, ValidationErrors, Validators} from "@angular/for
               [error]="[] | tuiFieldError | async"
             ></tui-error>
           </div>
-          <div class="row">
-              <div
-                      tuiGroup
-                      class="group"
-              >
-                  <div>
-                      <tui-input-number
-                              formControlName="pollFrequency"
-                      >
-                          Poll frequency
-                          <input
-                                  tuiTextfield
-                                  placeholder="60"
-                          />
-                      </tui-input-number>
-                      <tui-error
-                              formControlName="pollFrequency"
-                              [error]="[] | tuiFieldError | async"
-                      ></tui-error>
-                  </div>
-                  <div>
-                      <tui-select formControlName="pollPeriod"
-                      >
-                          Duration type
-                          <input
-                                  tuiTextfield
-                                  placeholder="Period"
-                          />
-                          <tui-data-list-wrapper
-                                  *tuiDataList
-                                  [items]="durationTypes"
-                          ></tui-data-list-wrapper>
-                      </tui-select>
-                      <tui-error
-                              formControlName="pollPeriod"
-                              [error]="[] | tuiFieldError | async"
-                      ></tui-error>
-                  </div>
+<!--          <div class="row">-->
+<!--              <div-->
+<!--                      tuiGroup-->
+<!--                      class="group"-->
+<!--              >-->
+<!--                  <div>-->
+<!--                      <tui-input-number-->
+<!--                              formControlName="pollFrequency"-->
+<!--                      >-->
+<!--                          Poll frequency-->
+<!--                          <input-->
+<!--                                  tuiTextfield-->
+<!--                                  placeholder="60"-->
+<!--                          />-->
+<!--                      </tui-input-number>-->
+<!--                      <tui-error-->
+<!--                              formControlName="pollFrequency"-->
+<!--                              [error]="[] | tuiFieldError | async"-->
+<!--                      ></tui-error>-->
+<!--                  </div>-->
+<!--                  <div>-->
+<!--                      <tui-select formControlName="pollPeriod"-->
+<!--                      >-->
+<!--                          Duration type-->
+<!--                          <input-->
+<!--                                  tuiTextfield-->
+<!--                                  placeholder="Period"-->
+<!--                          />-->
+<!--                          <tui-data-list-wrapper-->
+<!--                                  *tuiDataList-->
+<!--                                  [items]="durationTypes"-->
+<!--                          ></tui-data-list-wrapper>-->
+<!--                      </tui-select>-->
+<!--                      <tui-error-->
+<!--                              formControlName="pollPeriod"-->
+<!--                              [error]="[] | tuiFieldError | async"-->
+<!--                      ></tui-error>-->
+<!--                  </div>-->
 
 
-              </div>
+<!--              </div>-->
 
-          </div>
+<!--          </div>-->
 
       </form>
   `,
@@ -76,8 +76,8 @@ export class RssFeedConfigComponent {
 
   formGroup = new FormGroup({
     url: new FormControl('',[Validators.required, Validators.pattern(this.urlPattern)]),
-    pollFrequency: new FormControl<number|null>(null, Validators.required),
-    pollPeriod: new FormControl<string|null>(null, Validators.required)
+    // pollFrequency: new FormControl<number|null>(null, Validators.required),
+    // pollPeriod: new FormControl<string|null>(null, Validators.required)
   })
   durationTypes: Period[] = ['Seconds', 'Minutes' , 'Hours'];
 
@@ -116,8 +116,8 @@ export class RssFeedConfigComponent {
 
 export interface RssConfig {
   url: string;
-  pollFrequency: number;
-  pollPeriod: Period;
+  // pollFrequency: number;
+  // pollPeriod: Period;
 
 }
 

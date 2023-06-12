@@ -46,7 +46,12 @@ class OpenAiClient(
             setBody(objectMapper.writeValueAsString(request))
         }
         logger.debug { "OpenAI Response: ${openAiResponse.status}" }
+        if (!openAiResponse.status.isSuccess()) {
+            val error = objectMapper.readValue<OpenAiErrorResponse>(openAiResponse.bodyAsText())
+            throw OpenAiApiException(error)
+        }
         val jsonResponse = openAiResponse.bodyAsText()
+
         return objectMapper.readValue<OpenAiCompletionsResponse>(jsonResponse)
     }
 
@@ -74,6 +79,8 @@ data class OpenAiChatRequest(
 //   val frequency_penalty: BigDecimal = BigDecimal(0),
     val presence_penalty: BigDecimal = BigDecimal.ZERO
 )
+
+data class OpenAiApiException(val error: OpenAiErrorResponse) : RuntimeException(error.error.message)
 
 object OpenAiModel {
     const val GPT_4 = "gpt-4"
@@ -117,6 +124,14 @@ data class OpenAiChatResponse(
     val model: String,
     val choices: List<ChatCompletionChoice>,
     val usage: ChatGptUsage
+)
+
+data class OpenAiErrorResponse(val error: OpenAiError)
+data class OpenAiError(
+    val message: String,
+    val type: String,
+    val param: Any?,
+    val code: Any?
 )
 
 data class OpenAiCompletionsResponse(

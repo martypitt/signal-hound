@@ -21,7 +21,7 @@ import { Component, Input } from '@angular/core';
           </div>
       </div>
       <div class="body-container" *ngIf='displayBody'>
-        <div class="body">
+        <div class="body" [ngClass]="{wide: wide}">
           <ng-content></ng-content>
         </div>
       </div>
@@ -50,4 +50,8 @@ export class HeaderComponentLayoutComponent {
    */
   @Input()
   displayBody = true;
+
+  @Input()
+  wide: boolean = false;
+
 }
