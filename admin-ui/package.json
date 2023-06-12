@@ -18,6 +18,13 @@
     "@angular/platform-browser": "^14.2.0",
     "@angular/platform-browser-dynamic": "^14.2.0",
     "@angular/router": "^14.2.0",
+    "@taiga-ui/addon-table": "^3.30.0",
+    "@taiga-ui/cdk": "^3.30.0",
+    "@taiga-ui/core": "^3.30.0",
+    "@taiga-ui/icons": "^3.30.0",
+    "@taiga-ui/kit": "^3.30.0",
+    "@tinkoff/ng-dompurify": "3.0.0",
+    "dompurify": "2.2.9",
     "rxjs": "~7.5.0",
     "tslib": "^2.3.0",
     "zone.js": "~0.11.4"
@@ -26,13 +33,17 @@
     "@angular-devkit/build-angular": "^14.2.4",
     "@angular/cli": "~14.2.4",
     "@angular/compiler-cli": "^14.2.0",
+    "@types/dompurify": "2.2.3",
     "@types/jasmine": "~4.0.0",
+    "autoprefixer": "^10.4.14",
     "jasmine-core": "~4.3.0",
     "karma": "~6.4.0",
     "karma-chrome-launcher": "~3.1.0",
     "karma-coverage": "~2.2.0",
     "karma-jasmine": "~5.1.0",
     "karma-jasmine-html-reporter": "~2.0.0",
+    "postcss": "^8.4.24",
+    "tailwindcss": "^3.3.2",
     "typescript": "~4.7.2"
   }
 }

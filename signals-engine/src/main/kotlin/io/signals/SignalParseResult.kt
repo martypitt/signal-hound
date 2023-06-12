@@ -7,7 +7,7 @@ data class SignalParseResult(
     val success: Boolean,
     val signalUri: String?,
     val errorMessage: String? = null,
-    val signals: Map<String, Any>? = null
+    val signals: Map<String, Any>? = null,
 ) {
     companion object {
         fun success(source:SignalSource, signalUri: String?, signals: Map<String,Any>) = SignalParseResult(

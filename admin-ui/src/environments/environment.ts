@@ -3,7 +3,9 @@
 // The list of file replacements can be found in `angular.json`.
 
 export const environment = {
-  production: false
+  production: false,
+  // Convention for relative urls:  Start with an /, but don't end with one
+  serverUrl: "http://localhost:8080"
 };
 
 /*

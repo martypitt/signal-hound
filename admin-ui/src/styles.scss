@@ -1,1 +1,32 @@
 /* You can add global styles to this file, and also import other style files */
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@import "tailwind-colors";
+
+$primary: $sky-500;
+$primary-light: $sky-400;
+$primary-dark: $sky-600;
+
+:root {
+  // Used to use variables here (--tui-text-font: $font-sans), but it stopped working.
+  // Haven't really investigated why.
+  --tui-text-font: 'Inter var', sans-serif;
+  --tui-font-text: 'Inter var', sans-serif;
+
+
+  --tui-radius-s: 0.3rem;
+  --tui-radius-m: 0.4rem;
+  --tui-radius-l: 0.5rem;
+
+  --tui-primary: #{$primary};
+  --tui-primary-hover: #{$primary-light};
+  --tui-primary-active: #{$primary-dark};
+
+  button[data-size=m] {
+    font-weight: 500;
+  }
+
+}
+

@@ -5,13 +5,16 @@ import com.fasterxml.jackson.module.kotlin.readValue
 import com.google.common.base.CaseFormat
 import io.signals.openai.*
 import io.signals.sources.SignalBatch
+import io.signals.sources.SignalSource
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.reactor.mono
 import mu.KotlinLogging
+import reactor.core.publisher.Flux
 import java.lang.Exception
 
-class SignalScanner(
+class SignalParser(
     private val openAiClient: OpenAiClient,
     private val objectMapper: ObjectMapper = Json.defaultMapper
 ) {
@@ -21,41 +24,63 @@ class SignalScanner(
     }
 
     suspend fun parseSignals(
-        signalCollection: SignalBatch,
+        signalBatch: SignalBatch,
         extractions: List<Extraction>
     ): List<SignalParseResult> {
-        val systemPrompt = """You are a system that provides article summaries in JSON.
+        return parseSignals(signalBatch.signals, extractions)
+    }
 
-The user will provide the text of an article.  You are to provide a response in JSON.  Only provide JSON, no other content.
+    fun mapSignals(signals: Flux<SignalSource>, extractions: List<Extraction>): Flux<SignalParseResult> {
+        val systemPrompt = buildSystemPrompt(extractions)
+        return signals.flatMap { signal ->
+            mono { parseSignal(signal, systemPrompt) }
+        }
+    }
 
-The JSON should follow this schema:
-
-```
-${extractionsAsMarkdownTable(extractions)}
-```
-"""
+    suspend fun parseSignals(
+        signals: List<SignalSource>,
+        extractions: List<Extraction>
+    ): List<SignalParseResult> {
+        val systemPrompt = buildSystemPrompt(extractions)
         val parsed = coroutineScope {
 
-            signalCollection.signals
+            signals
                 .map { signalSource ->
                     async {
-                        try {
-                            logger.info { "Attempting enrichment of signal ${signalSource.id}" }
-                            val question = systemPrompt + "\n\n\n" + signalSource.text()
-                            val completionsResponse = openAiClient.sendCompletion(question)
-                            val signals = readSignalsFromCompletionResponse(completionsResponse)
-
-                            logger.info { "Signal ${signalSource.id} enriched successfully" }
-                            SignalParseResult.success(signalSource, signalSource.signalUri, signals)
-                        } catch (e: Exception) {
-                            logger.warn { "Signal ${signalSource.id} failed to provide signals: ${e.message!!}.  Source: ${signalSource.signalUri}" }
-                            SignalParseResult.failed(signalSource, signalSource.signalUri, e.message!!)
-                        }
+                        parseSignal(signalSource, systemPrompt)
                     }
                 }
         }.awaitAll()
         return parsed
     }
+
+    private suspend fun parseSignal(
+        signalSource: SignalSource,
+        systemPrompt: String
+    ) = try {
+        logger.info { "Attempting enrichment of signal ${signalSource.id}" }
+        val question = systemPrompt + "\n\n\n" + signalSource.text()
+        val completionsResponse = openAiClient.sendCompletion(question)
+        val signals = readSignalsFromCompletionResponse(completionsResponse)
+
+        logger.info { "Signal ${signalSource.id} enriched successfully" }
+        SignalParseResult.success(signalSource, signalSource.signalUri, signals)
+    } catch (e: Exception) {
+        logger.warn { "Signal ${signalSource.id} failed to provide signals: ${e.message!!}.  Source: ${signalSource.signalUri}" }
+        SignalParseResult.failed(signalSource, signalSource.signalUri, e.message!!)
+    }
+
+    private fun buildSystemPrompt(extractions: List<Extraction>) =
+        """You are a system that provides article summaries in JSON.
+    
+    The user will provide the text of an article.  You are to provide a response in JSON.  Only provide JSON, no other content.
+    
+    The JSON should follow this schema:
+    
+    ```
+    ${extractionsAsMarkdownTable(extractions)}
+    ```
+    """
 
 
     private fun readSignalsFromCompletionResponse(chatResponse: OpenAiCompletionsResponse): Map<String, Any> {

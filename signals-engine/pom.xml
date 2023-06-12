@@ -5,8 +5,8 @@
     <modelVersion>4.0.0</modelVersion>
 
     <parent>
-        <artifactId>signal-hunt-platform</artifactId>
-        <groupId>io.signals</groupId>
+        <artifactId>signal-hound-platform</artifactId>
+        <groupId>io.signalhound</groupId>
         <version>1.0-SNAPSHOT</version>
     </parent>
     <artifactId>signal-engine</artifactId>
@@ -17,6 +17,18 @@
 
 
     <dependencies>
+        <dependency>
+            <groupId>io.projectreactor</groupId>
+            <artifactId>reactor-core</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>io.projectreactor.kotlin</groupId>
+            <artifactId>reactor-kotlin-extensions</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.jetbrains.kotlinx</groupId>
+            <artifactId>kotlinx-coroutines-reactor</artifactId>
+        </dependency>
         <dependency>
             <groupId>com.google.guava</groupId>
             <artifactId>guava</artifactId>

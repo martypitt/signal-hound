@@ -3,16 +3,15 @@ package io.signals
 import io.kotest.core.spec.style.DescribeSpec
 import io.kotest.matchers.collections.shouldNotBeEmpty
 import io.ktor.client.*
-import io.ktor.client.engine.cio.*
 import io.signals.openai.OpenAiClient
 import io.signals.sources.rss.RssFeedReader
 
 class SignalScannerTest : DescribeSpec({
     describe("e2e signal scanner test") {
         val httpClient: HttpClient = Http.httpClient
-        val openAiClient = OpenAiClient(httpClient, "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")
+        val openAiClient = OpenAiClient(httpClient, System.getProperty("OPENAI_API_KEY"))
         val rssFeedReader = RssFeedReader(httpClient)
-        val signalScanner = SignalScanner(openAiClient)
+        val signalScanner = SignalParser(openAiClient)
         it("should look for signals in TechCrunch rss feed") {
             val rssFeed = rssFeedReader.read("https://techcrunch.com/feed", limit = 5)
             val extractions = listOf(

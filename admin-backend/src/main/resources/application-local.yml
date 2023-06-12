@@ -1,0 +1,11 @@
+spring:
+  jpa:
+    hibernate:
+      ddl-auto: update
+  datasource:
+    url: "jdbc:postgresql://localhost:5432/signals"
+    username: "martypitt"
+    password: "password"
+signals:
+  cors:
+    enabled: false

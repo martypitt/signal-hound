@@ -58,7 +58,7 @@ class RssFeedReader(
         return RssFeed(
             feed.title,
             feed.description,
-            articles.subList(0, limit),
+            articles.subList(0, minOf(limit, articles.size)),
             nextRefreshTime = Instant.now().plus(Duration.ofHours(1))
 
         )
